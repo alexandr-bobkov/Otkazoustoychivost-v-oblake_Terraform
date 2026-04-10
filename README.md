@@ -244,6 +244,69 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 <img src="img/5.jpg" width = 100%>
 
 
+
+<details>
+<summary><b>Для себя</b></summary>
+# 🛸 Шпаргалка: Yandex Cloud + Terraform + Ansible
+
+Этот документ содержит описание логики, параметров и команд для развертывания отказоустойчивой инфраструктуры.
+
+---
+
+## 🏗 1. Логика работы (Workflow)
+1. **Terraform**: Создает сеть, подсеть, 2 виртуальные машины (через `count`) и балансировщик (LBO).
+2. **Inventory**: Terraform автоматически создает файл `hosts.ini`, подставляя туда IP-адреса созданных машин.
+3. **Ansible**: Заходит на машины через 60 секунд после их создания и устанавливает Nginx.
+
+---
+
+## 🛠 2. Справочник ресурсов Terraform (Yandex Cloud)
+
+
+| Ресурс | Описание | Ключевые параметры |
+| :--- | :--- | :--- |
+| `yandex_vpc_network` | Виртуальная сеть | `name` — имя сети. |
+| `yandex_vpc_subnet` | Подсеть проекта | `v4_cidr_blocks` (напр. `10.0.1.0/24`), `zone`. |
+| `yandex_compute_instance` | Виртуальная машина | `count` — кол-во ВМ, `nat = true` — дает внешний IP. |
+| `yandex_lb_target_group` | Целевая группа | `target` — список внутренних IP-адресов ВМ. |
+| `yandex_lb_network_load_balancer` | Балансировщик | `listener` (порт 80), `healthcheck` (проверка связи). |
+
+**Важные настройки метаданных ВМ:**
+* `ssh-keys`: Доступ в формате `"user:${file("~/.ssh/id_rsa.pub")}"`.
+* `preemptible = true`: Экономия 50% бюджета (прерываемая машина).
+
+---
+
+## 📦 3. Справочник модулей Ansible
+
+
+| Модуль | Действие | Пример параметров |
+| :--- | :--- | :--- |
+| **apt** | Установка софта | `name: nginx`, `state: present`, `update_cache: yes`. |
+| **service** | Управление службами | `name: nginx`, `state: started`, `enabled: yes`. |
+| **copy** | Создание файлов | `content: "Hello"`, `dest: /var/www/html/index.html`. |
+| **local-exec** (в TF) | Запуск из консоли | `command: "ansible-playbook -i hosts.ini playbook.yml"`. |
+
+---
+
+## 💻 4. Основные команды терминала (Debian 13)
+
+### Подготовка и запуск
+```bash
+# 1. Авторизация (токен живет 24 часа)
+export YC_TOKEN=$(yc config get token)
+
+# 2. Инициализация (скачивание плагинов)
+terraform init -upgrade
+
+# 3. Развертывание (ВМ + Балансировщик + Ansible)
+terraform apply -auto-approve
+
+# 4. Удаление (чтобы не тратить деньги)
+terraform destroy -auto-approve
+
+</details>
+
 </details>
 
 ------
