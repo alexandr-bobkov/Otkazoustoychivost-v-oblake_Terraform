@@ -1,0 +1,22 @@
+---
+- name: Install Nginx
+  hosts: web # Применить ко всем машинам из группы [web]
+  become: true # Запускать команды от имени root (sudo)
+  tasks:
+    - name: Update apt and install nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Start nginx
+      service:
+        name: nginx
+        state: started
+        enabled: true
+    # Записываем имя хоста в главную страницу
+    - name: Create custom index.html with hostname
+      copy:
+        content: "<h1>Hello from {{ inventory_hostname }}</h1>"
+        dest: /var/www/html/index.html
+        mode: '0644'
