@@ -246,7 +246,8 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 
 
 <details>
-<summary><b>Для себя</b></summary>
+<summary><d>Для себя</d></summary>
+
 # 🛸 Шпаргалка: Yandex Cloud + Terraform + Ansible
 
 Этот документ содержит описание логики, параметров и команд для развертывания отказоустойчивой инфраструктуры.
@@ -305,7 +306,7 @@ terraform apply -auto-approve
 # 4. Удаление (чтобы не тратить деньги)
 terraform destroy -auto-approve
 
-</details>
+	</details>
 
 </details>
 
