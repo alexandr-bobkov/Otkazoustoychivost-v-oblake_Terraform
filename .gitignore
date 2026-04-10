@@ -5,3 +5,8 @@
 *.terraform
 *.io
 *.i0
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+*.tfvars
