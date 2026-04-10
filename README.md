@@ -305,7 +305,7 @@ terraform apply -auto-approve
 
 # 4. Удаление (чтобы не тратить деньги)
 terraform destroy -auto-approve
-
+```
 </details>
 </details>
 
