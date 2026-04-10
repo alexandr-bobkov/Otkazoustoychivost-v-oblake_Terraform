@@ -305,8 +305,8 @@ terraform apply -auto-approve
 
 # 4. Удаление (чтобы не тратить деньги)
 terraform destroy -auto-approve
-</details>
 
+</details>
 </details>
 
 ------
@@ -314,7 +314,6 @@ terraform destroy -auto-approve
 
 
 <details>
-
 <summary><b>Задание 2</b></summary>
 
 - Написать скрипт и настроить задачу на регулярное резервное копирование домашней директории пользователя с помощью rsync и cron.
