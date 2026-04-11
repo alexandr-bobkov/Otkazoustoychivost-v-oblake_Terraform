@@ -352,7 +352,7 @@ terraform destroy -auto-approve
 <summary><b>📖 Описание логики работы (Architecture)</b></summary>
 
 ### Ключевые особенности:
-1. **Instance Group (IG)**: Мы используем облачный "автопилот". Если одна машина выйдет из строя, облако само её пересоздаст.
+1. **Instance Group (IG)**: Мы используем особенность облако автоматической поднятие хоста. Если одна машина выйдет из строя, облако само её пересоздаст.
 2. **Вменяемые имена**: Благодаря маске `web-{instance.index}`, машины получают понятные имена в консоли и внутри системы (`web-1`, `web-2`).
 3. **Cloud-init (User Data)**: Установка Nginx и кастомизация страницы приветствия прописаны в файле `userdata.yaml`. Это позволяет вводить машины в строй без ручного запуска Ansible.
 4. **Service Account**: Для работы группы машин создан отдельный сервисный аккаунт с правами `editor`.
@@ -373,6 +373,8 @@ terraform destroy -auto-approve
 
 ---
 
+
+
 <details>
 <summary><b>📄 Скрипт автоматизации (userdata.yaml)</b></summary>
 
@@ -386,7 +388,14 @@ runcmd:
   - [ systemctl, start, nginx ]
   - [ sh, -c, "echo '<html><head><meta charset=\"utf-8\"></head><body><h1>Привет! Сервер отвечает: $(hostname)</h1></body></html>' > /var/www/html/index.html" ]
 ```
+</details>
 
+<summary>📷 Скриншот статуса балансировщика и целевой группы<hfepth</summary>
+<img src="img/8.jpg" width = 100%>
+<img src="img/9.jpg" width = 100%>
 
+<summary>📷 Скриншот страницы, которая открылась при запросе IP-адреса балансировщика<hfepth</summary>
+<img src="img/5.jpg" width = 100%>
+<img src="img/6.jpg" width = 100%>
 
 </details>
