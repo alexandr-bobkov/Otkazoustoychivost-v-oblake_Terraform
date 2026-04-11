@@ -369,6 +369,162 @@ terraform destroy -auto-approve
 * **yandex_lb_network_load_balancer**: Принимает внешний трафик на порт 80 и распределяет его между машинами группы.
 * **depends_on**: Используется для соблюдения строгой очередности (сначала права доступа, потом группа машин, затем балансировщик).
 
+- Конфиг файла `main.tf`:
+
+```config
+################################################################################
+# 1. ПОИСК ОБРАЗА СИСТЕМЫ
+################################################################################
+# Мы не пишем ID вручную, чтобы код не протух. 
+# Terraform сам найдет последнюю версию Ubuntu 22.04 LTS.
+data "yandex_compute_image" "ubuntu" {
+  family = "ubuntu-2204-lts"
+}
+
+################################################################################
+# 2. СЕТЕВАЯ ИНФРАСТРУКТУРА
+################################################################################
+# Создаем "облачную сеть" — это наш изолированный сегмент в дата-центре.
+resource "yandex_vpc_network" "network-ig" {
+  name = "network-ig"
+}
+
+# Создаем "подсеть" внутри сети. Машины будут получать IP из этого диапазона.
+resource "yandex_vpc_subnet" "subnet-ig" {
+  name           = "subnet-ig"
+  zone           = "ru-central1-a"
+  network_id     = yandex_vpc_network.network-ig.id
+  v4_cidr_blocks = ["10.0.1.0/24"] # Внутренние IP будут типа 10.0.1.5, 10.0.1.10
+}
+
+################################################################################
+# 3. СЕРВИСНЫЙ АККАУНТ (СА) И ПРАВА
+################################################################################
+# Чтобы Группа машин могла сама создавать ВМ, ей нужен "паспорт" (аккаунт).
+resource "yandex_iam_service_account" "ig-sa" {
+  name = "ig-sa"
+}
+
+# Даем этому "паспорту" права Редактора (editor) в нашей папке.
+# Без этого шага создание Группы машин упадет с ошибкой Permission Denied.
+resource "yandex_resourcemanager_folder_iam_member" "editor" {
+  folder_id = var.folder_id
+  role      = "editor"
+  member    = "serviceAccount:${yandex_iam_service_account.ig-sa.id}"
+}
+
+################################################################################
+# 4. ГРУППА ВИРТУАЛЬНЫХ МАШИН (INSTANCE GROUP)
+################################################################################
+resource "yandex_compute_instance_group" "ig-1" {
+  name               = "fixed-ig-with-balancer"
+  folder_id          = var.folder_id
+  service_account_id = yandex_iam_service_account.ig-sa.id
+  
+  # КРИТИЧЕСКИ ВАЖНО: Ждем, пока права (роль editor) реально применятся в облаке.
+  # Это защищает от зависания "Still creating..."
+  depends_on = [yandex_resourcemanager_folder_iam_member.editor]
+
+  # Шаблон — это инструкция: "Как штамповать одинаковые серверы"
+  instance_template {
+    name     = "web-{instance.index}" # Имя в консоли: web-1, web-2
+    hostname = "web-{instance.index}" # Имя внутри Linux (hostname)
+    
+    platform_id = "standard-v3" # Самое современное поколение процессоров
+    resources {
+      memory = 2  # Минимум 2ГБ для v3, иначе будет ошибка
+      cores  = 2
+    }
+
+    boot_disk {
+      mode = "READ_WRITE"
+      initialize_params {
+        image_id = data.yandex_compute_image.ubuntu.id
+      }
+    }
+
+    network_interface {
+      network_id = yandex_vpc_network.network-ig.id
+      subnet_ids = ["${yandex_vpc_subnet.subnet-ig.id}"]
+      nat        = true # Внешний IP, чтобы сервер мог скачать Nginx из интернета
+    }
+
+    metadata = {
+      ssh-keys  = "ubuntu:${file("~/.ssh/id_rsa.pub")}" # Твой ключ для входа
+      # "Магия" авто-установки: подсовываем файл со скриптом установки Nginx
+      user-data = file("./userdata.yaml") 
+    }
+  }
+
+  # Сколько машин должно работать ВСЕГДА. Если одна умрет — облако создаст новую.
+  scale_policy {
+    fixed_scale {
+      size = 2 
+    }
+  }
+
+  allocation_policy {
+    zones = ["ru-central1-a"]
+  }
+
+  # Правила обновления группы (например, если ты поменяешь конфиг Nginx)
+  deploy_policy {
+    max_unavailable = 1 # Разрешаем выключить 1 машину во время обновления
+    max_expansion   = 0 # Не плодить лишние временные машины
+  }
+
+  # Группа сама создаст Target Group и добавит туда IP-адреса наших машин
+  load_balancer {
+    target_group_name = "tg-instance-group"
+  }
+}
+
+################################################################################
+# 5. СЕТЕВОЙ БАЛАНСИРОВЩИК (NETWORK LOAD BALANCER)
+################################################################################
+resource "yandex_lb_network_load_balancer" "lb-1" {
+  name = "lb-instance-group"
+
+  # Ждем, пока Группа машин создастся полностью, чтобы балансировщику было к чему цепляться
+  depends_on = [yandex_compute_instance_group.ig-1]
+
+  listener {
+    name = "http-listener"
+    port = 80 # Внешний порт, на который мы будем заходить
+    external_address_spec {
+      ip_version = "ipv4"
+    }
+  }
+
+  attached_target_group {
+    # Берем ID целевой группы, которую автоматически сгенерировала Группа машин
+    target_group_id = yandex_compute_instance_group.ig-1.load_balancer.0.target_group_id
+
+    # Проверка "здоровья": балансировщик стучится в 80 порт. 
+    # Если Nginx ответил — машина помечается как Healthy.
+    healthcheck {
+      name = "http"
+      http_options {
+        port = 80
+        path = "/"
+      }
+    }
+  }
+}
+
+################################################################################
+# 6. ВЫВОД РЕЗУЛЬТАТА
+################################################################################
+# После завершения Terraform выдаст нам готовый IP адрес балансировщика.
+output "lb_external_ip" {
+  value = flatten([
+    for listener in yandex_lb_network_load_balancer.lb-1.listener :
+    [for spec in listener.external_address_spec : spec.address]
+  ])
+}
+
+```
+
 </details>
 
 ---
