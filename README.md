@@ -40,6 +40,8 @@
     Проверка: terraform plan (смотрим, что создастся 2 ВМ и балансировщик).
     Запуск: terraform apply (Terraform создает облако, создает файл hosts.ini, ждет 60 сек запускает Ansible).
 
+- [Конфигурационные файлы по сылке](https://github.com/alexandr-bobkov/yandex_compute_instance_group_terraform.git) 
+
 1. Файл `main.tf`
 
 ```config
@@ -535,6 +537,7 @@ output "lb_external_ip" {
 <summary><b>📄 Скрипт автоматизации (userdata.yaml)</b></summary>
 
 ```yaml
+
 #cloud-config
 # Обновляем список пакетов при первой загрузке
 package_update: true
@@ -553,6 +556,7 @@ runcmd:
     echo "<html><head><meta charset='utf-8'></head><body><h1>Привет! Это сервер: $(hostname)</h1></body></html>" > /var/www/html/index.html
 
 ```
+
 </details>
 
 <summary>📷 Скриншот статуса балансировщика и целевой группы<hfepth</summary>
