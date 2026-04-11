@@ -40,7 +40,7 @@
     Проверка: terraform plan (смотрим, что создастся 2 ВМ и балансировщик).
     Запуск: terraform apply (Terraform создает облако, создает файл hosts.ini, ждет 60 сек запускает Ansible).
 
-- [Конфигурационные файлы по сылке](https://github.com/alexandr-bobkov/yandex_compute_instance_group_terraform.git) 
+- [Конфигурационные файлы по сылке](https://github.com/alexandr-bobkov/Otkazoustoychivost-v-oblake_Terraform.git) 
 
 1. Файл `main.tf`
 
@@ -348,6 +348,7 @@ terraform destroy -auto-approve
 
 Этот проект реализует автоматизированную группу виртуальных машин с сетевым балансировщиком нагрузки. Настройка серверов (установка Nginx) происходит автоматически при загрузке.
 - [Конфигурационные файлы по ссылке](https://github.com/alexandr-bobkov/yandex_compute_instance_group_terraform.git)
+
 ---
 
 <details>
@@ -568,3 +569,6 @@ runcmd:
 <img src="img/6.jpg" width = 100%>
 
 </details>
+
+--------
+--------
