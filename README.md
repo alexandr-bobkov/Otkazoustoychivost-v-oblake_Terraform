@@ -340,4 +340,53 @@ terraform destroy -auto-approve
 
 ------
 
+## ОТВЕТ:
+
+# 🛸 
+
+Этот проект реализует автоматизированную группу виртуальных машин с сетевым балансировщиком нагрузки. Настройка серверов (установка Nginx) происходит автоматически при загрузке.
+
+---
+
+<details>
+<summary><b>📖 Описание логики работы (Architecture)</b></summary>
+
+### Ключевые особенности:
+1. **Instance Group (IG)**: Мы используем облачный "автопилот". Если одна машина выйдет из строя, облако само её пересоздаст.
+2. **Вменяемые имена**: Благодаря маске `web-{instance.index}`, машины получают понятные имена в консоли и внутри системы (`web-1`, `web-2`).
+3. **Cloud-init (User Data)**: Установка Nginx и кастомизация страницы приветствия прописаны в файле `userdata.yaml`. Это позволяет вводить машины в строй без ручного запуска Ansible.
+4. **Service Account**: Для работы группы машин создан отдельный сервисный аккаунт с правами `editor`.
+
+</details>
+
+---
+
+<details>
+<summary><b>🛠 Конфигурация ресурсов (Terraform)</b></summary>
+
+### Основные компоненты `main.tf`:
+* **yandex_compute_instance_group**: Управляет жизненным циклом двух ВМ.
+* **yandex_lb_network_load_balancer**: Принимает внешний трафик на порт 80 и распределяет его между машинами группы.
+* **depends_on**: Используется для соблюдения строгой очередности (сначала права доступа, потом группа машин, затем балансировщик).
+
+</details>
+
+---
+
+<details>
+<summary><b>📄 Скрипт автоматизации (userdata.yaml)</b></summary>
+
+```yaml
+#cloud-config
+package_update: true
+packages:
+  - nginx
+runcmd:
+  - [ systemctl, enable, nginx ]
+  - [ systemctl, start, nginx ]
+  - [ sh, -c, "echo '<html><head><meta charset=\"utf-8\"></head><body><h1>Привет! Сервер отвечает: $(hostname)</h1></body></html>' > /var/www/html/index.html" ]
+```
+
+
+
 </details>
