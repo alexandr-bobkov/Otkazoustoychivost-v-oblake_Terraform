@@ -347,7 +347,7 @@ terraform destroy -auto-approve
 # 🛸 
 
 Этот проект реализует автоматизированную группу виртуальных машин с сетевым балансировщиком нагрузки. Настройка серверов (установка Nginx) происходит автоматически при загрузке.
-
+- [Конфигурационные файлы по ссылке](https://github.com/alexandr-bobkov/yandex_compute_instance_group_terraform.git)
 ---
 
 <details>
