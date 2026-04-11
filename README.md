@@ -536,13 +536,22 @@ output "lb_external_ip" {
 
 ```yaml
 #cloud-config
+# Обновляем список пакетов при первой загрузке
 package_update: true
+
+# Указываем, какие пакеты нужно установить
 packages:
   - nginx
+
+# Команды, которые выполнятся после установки пакетов
 runcmd:
   - [ systemctl, enable, nginx ]
   - [ systemctl, start, nginx ]
-  - [ sh, -c, "echo '<html><head><meta charset=\"utf-8\"></head><body><h1>Привет! Сервер отвечает: $(hostname)</h1></body></html>' > /var/www/html/index.html" ]
+  # Эта команда записывает в index.html приветствие и реальное имя сервера (hostname)
+  # Используем символ "|", чтобы команда $(hostname) сработала внутри кавычек
+  - |
+    echo "<html><head><meta charset='utf-8'></head><body><h1>Привет! Это сервер: $(hostname)</h1></body></html>" > /var/www/html/index.html
+
 ```
 </details>
 
